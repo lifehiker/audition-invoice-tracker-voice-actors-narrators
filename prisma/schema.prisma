@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum SubscriptionTier {
+  STARTER
+  PRO
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  NONE
+}
+
+enum AuditionStatus {
+  SUBMITTED
+  AWAITING
+  BOOKED
+  PASSED
+  EXPIRED
+}
+
+enum RightsType {
+  BUYOUT
+  ROYALTY_SHARE
+  UNION_RESIDUAL
+}
+
+enum RateType {
+  FLAT
+  PFH
+}
+
+enum BookingStatus {
+  IN_PRODUCTION
+  DELIVERED
+  PAYMENT_PENDING
+  PAID
+  DISPUTE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  ACX_DIRECT
+  PAYPAL
+  CHECK
+  BANK_TRANSFER
+  OTHER
+}
+
+model User {
+  id                   String               @id @default(cuid())
+  name                 String?
+  email                String               @unique
+  emailVerified        DateTime?
+  image                String?
+  passwordHash         String?
+  stripeCustomerId     String?
+  stripePriceId        String?
+  stripeSubscriptionId String?
+  subscriptionTier     SubscriptionTier?
+  subscriptionStatus   SubscriptionStatus   @default(TRIAL)
+  trialEndsAt          DateTime?
+  seededAt             DateTime?
+  benchmarkRate        Float                @default(225)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  accounts             Account[]
+  sessions             Session[]
+  auditions            Audition[]
+  bookings             Booking[]
+  invoices             Invoice[]
+  payments             Payment[]
+  royaltyProjects      RoyaltyShareProject[]
+  rateEntries          RateEntry[]
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionToken])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Audition {
+  id            String         @id @default(cuid())
+  userId        String
+  title         String
+  author        String
+  wordCount     Int?
+  finishedHours Float?
+  clientName    String
+  submittedAt   DateTime
+  status        AuditionStatus @default(SUBMITTED)
+  rightsType    RightsType     @default(BUYOUT)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking       Booking?
+}
+
+model Booking {
+  id               String            @id @default(cuid())
+  userId           String
+  auditionId       String?           @unique
+  title            String
+  clientName       String
+  rightsType       RightsType
+  agreedRate       Float
+  rateType         RateType
+  finishedHours    Float?
+  exclusivityStart DateTime?
+  exclusivityEnd   DateTime?
+  deliveryDeadline DateTime?
+  status           BookingStatus     @default(IN_PRODUCTION)
+  notes            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audition         Audition?         @relation(fields: [auditionId], references: [id], onDelete: SetNull)
+  invoices         Invoice[]
+  royaltyProjects  RoyaltyShareProject[]
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  userId       String
+  bookingId    String?
+  clientName   String
+  amount       Float
+  dueDate      DateTime
+  status       InvoiceStatus @default(DRAFT)
+  paymentTerms String?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking      Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  payments     Payment[]
+}
+
+model Payment {
+  id        String        @id @default(cuid())
+  userId    String
+  invoiceId String
+  amount    Float
+  paidAt    DateTime
+  method    PaymentMethod
+  notes     String?
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model RoyaltyShareProject {
+  id                    String   @id @default(cuid())
+  userId                String
+  bookingId             String?
+  title                 String
+  finishedHours         Float
+  royaltySplitPercent   Float
+  acxRetailPrice        Float
+  estimatedMonthlySales Float
+  buyoutEquivalentRate  Float
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  booking               Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+}
+
+model RateEntry {
+  id                  String     @id @default(cuid())
+  userId              String
+  clientName          String
+  rightsType          RightsType
+  ratePerFinishedHour Float
+  recordedAt          DateTime
+  notes               String?
+  createdAt           DateTime   @default(now())
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
