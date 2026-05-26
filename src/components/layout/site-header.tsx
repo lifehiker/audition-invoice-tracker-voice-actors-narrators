@@ -4,7 +4,12 @@ import { auth, signOut } from "@/auth";
 import { Button } from "@/components/ui/button";
 
 export async function SiteHeader() {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    // auth unavailable (e.g. DB timeout) — render unauthenticated UI
+  }
 
   return (
     <header className="shell py-6">
