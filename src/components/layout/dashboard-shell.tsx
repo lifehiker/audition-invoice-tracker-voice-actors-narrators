@@ -22,7 +22,12 @@ export async function DashboardShell({
   currentPath: string;
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  let session = null;
+  try {
+    session = await auth();
+  } catch {
+    // auth unavailable (e.g. DB timeout) — render shell with empty session
+  }
 
   return (
     <div className="shell grid gap-6 py-8 lg:grid-cols-[260px_minmax(0,1fr)]">
