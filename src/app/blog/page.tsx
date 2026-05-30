@@ -4,7 +4,12 @@ import { SiteHeader } from "@/components/layout/site-header";
 import { getBlogPosts } from "@/lib/blog";
 
 export default async function BlogIndexPage() {
-  const posts = await getBlogPosts();
+  let posts: Awaited<ReturnType<typeof getBlogPosts>>;
+  try {
+    posts = await getBlogPosts();
+  } catch {
+    posts = [];
+  }
 
   return (
     <div className="pb-16">
