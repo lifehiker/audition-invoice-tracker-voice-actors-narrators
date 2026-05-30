@@ -26,8 +26,21 @@ export default async function AuditionsPage({
     to?: string;
   }>;
 }) {
-  const user = await requireUser();
-  const data = await getDashboardData(user.id);
+  let user: Awaited<ReturnType<typeof requireUser>>;
+  let data: Awaited<ReturnType<typeof getDashboardData>>;
+  try {
+    user = await requireUser();
+    data = await getDashboardData(user.id);
+  } catch (e: unknown) {
+    // Re-throw Next.js redirects (e.g. unauthenticated → /login)
+    if (e instanceof Error && (e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    // DB/auth timeout — render shell with visible text instead of empty body
+    return (
+      <DashboardShell currentPath="/dashboard/auditions">
+        <p className="text-[var(--muted)]">Unable to load auditions. Please refresh.</p>
+      </DashboardShell>
+    );
+  }
   const filters = await searchParams;
   const filteredAuditions = data.auditions.filter((audition) => {
     if (filters.status && audition.status !== filters.status) {
