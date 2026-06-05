@@ -17,8 +17,19 @@ import { requireUser } from "@/lib/auth-helpers";
 import { getDashboardData } from "@/lib/data";
 
 export default async function InvoicesPage() {
-  const user = await requireUser();
-  const data = await getDashboardData(user.id);
+  let user: Awaited<ReturnType<typeof requireUser>>;
+  let data: Awaited<ReturnType<typeof getDashboardData>>;
+  try {
+    user = await requireUser();
+    data = await getDashboardData(user.id);
+  } catch (e: unknown) {
+    if (e instanceof Error && (e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
+    return (
+      <DashboardShell currentPath="/dashboard/invoices">
+        <p className="text-[var(--muted)]">Unable to load invoices. Please refresh.</p>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell currentPath="/dashboard/invoices">
