@@ -164,11 +164,11 @@ export default async function AuditionsPage({
   } catch (e: unknown) {
     // Re-throw Next.js redirects (e.g. unauthenticated → /login)
     if (e instanceof Error && (e as { digest?: string }).digest?.startsWith("NEXT_REDIRECT")) throw e;
-    // DB/auth timeout or render error — render shell with visible text instead of empty body
+    // DB/auth timeout or render error — use plain div (no async deps) so response completes immediately
     return (
-      <DashboardShell currentPath="/dashboard/auditions">
-        <p className="text-[var(--muted)]">Unable to load auditions. Please refresh.</p>
-      </DashboardShell>
+      <div style={{ padding: "2rem" }}>
+        <p>Unable to load auditions. Please refresh.</p>
+      </div>
     );
   }
 }
